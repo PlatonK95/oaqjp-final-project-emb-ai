@@ -1,27 +1,33 @@
-import unittest
-from EmotionDetection.emotion_detection import emotion_detector
+import requests
+import json
 
-class TestEmotionDetector(unittest.TestCase):
-    def test_emotion_detector(self):
-        
-        result_1 = emotion_detector('I am glad this happened')
-        self.assertEqual(result_1['dominant_emotion'], 'joy')
-
-        
-        result_2 = emotion_detector('I am really mad about this')
-        self.assertEqual(result_2['dominant_emotion'], 'anger')
-
-        
-        result_3 = emotion_detector('I feel disgusted just hearing about this')
-        self.assertEqual(result_3['dominant_emotion'], 'disgust')
-
-        
-        result_4 = emotion_detector('I am so sad about this')
-        self.assertEqual(result_4['dominant_emotion'], 'sadness')
-
-        
-        result_5 = emotion_detector('I am really afraid that this will happen')
-        self.assertEqual(result_5['dominant_emotion'], 'fear')
-
-if __name__ == '__main__':
-    unittest.main()
+def emotion_detector(text_to_analyze):
+    url = 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
+    headers = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"}
+    myobj = { "raw_document": { "text": text_to_analyze } }
+    
+    response = requests.post(url, json=myobj, headers=headers)
+    
+    # ΠΡΩΤΑ ΕΛΕΓΧΟΥΜΕ ΤΟ STATUS CODE (Task 7 Requirement)
+    if response.status_code == 400:
+        return {
+            'anger': None,
+            'disgust': None,
+            'fear': None,
+            'joy': None,
+            'sadness': None,
+            'dominant_emotion': None
+        }
+    
+    # Αν το status code είναι 200 (επιτυχές), τότε μόνο διαβάζουμε το 'emotionPredictions'
+    formatted_response = json.loads(response.text)
+    emotions = formatted_response['emotionPredictions'][0]['emotion']
+    
+    return {
+        'anger': emotions['anger'],
+        'disgust': emotions['disgust'],
+        'fear': emotions['fear'],
+        'joy': emotions['joy'],
+        'sadness': emotions['sadness'],
+        'dominant_emotion': max(emotions, key=emotions.get)
+    }
